@@ -10,6 +10,14 @@ magnifier that follows the pointer too, mostly so you can look at the
 craquelure. I hid a signature in the bottom right, you'll need the
 magnifier to read it.
 
+## v2
+
+- Eyelids follow the gaze and she blinks every 4-7s: the skin around the eyes is a fine mesh warp (`FaceMesh`), not an overlay.
+- The whole head rolls up to 2° around the neck and the features shift a little, on a slower spring than the eyes.
+- Eyes use an underdamped spring with micro drift and micro saccades when the target is still; pupils dilate near screen centre.
+- On web, `WebcamHandGazeSource` tracks the index fingertip with MediaPipe Hands (`web/hand.js`), mirrored and low-pass filtered, and crossfades to the pointer 500ms after the hand is lost.
+- Camera preview is off by default, toggle it with the icon top-right. `flutter run -d chrome --release` for 60fps.
+
 ## Running
 
 ```

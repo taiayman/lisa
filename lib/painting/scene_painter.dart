@@ -1,60 +1,31 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/rendering.dart';
 
+import '../motion/pose.dart';
 import 'eyes_painter.dart';
+import 'face_mesh.dart';
 import 'geometry.dart';
 
 class ScenePainter extends CustomPainter {
-  const ScenePainter({
-    required this.image,
-    required this.gazeX,
-    required this.gazeY,
-  });
+  ScenePainter({required this.mesh, this.pose = const Pose()});
 
-  final ui.Image image;
-  final double gazeX;
-  final double gazeY;
-
-  static const lensZoom = 2.2;
-  static const lensRadiusFrac = 0.16;
+  final FaceMesh mesh;
+  final Pose pose;
 
   @override
   void paint(Canvas canvas, Size size) {
-    _portrait(canvas, size);
-
-    final at = Offset(
-      (gazeX.clamp(-1, 1) + 1) / 2 * size.width,
-      (gazeY.clamp(-1, 1) + 1) / 2 * size.height,
-    );
-    final r = size.width * lensRadiusFrac;
-    canvas.save();
-    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: at, radius: r)));
-    canvas.translate(at.dx, at.dy);
-    canvas.scale(lensZoom);
-    canvas.translate(-at.dx, -at.dy);
-    _portrait(canvas, size, inLens: true);
-    canvas.restore();
-  }
-
-  void _portrait(Canvas canvas, Size size, {bool inLens = false}) {
+    mesh.update(pose);
     final s = scaleFor(size);
     canvas.save();
     canvas.translate(offsetFor(size).dx, offsetFor(size).dy);
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(0, 0, imgW * s, imgH * s),
-      Paint()..filterQuality = FilterQuality.medium,
-    );
     canvas.scale(s);
-    EyesPainter(gazeX: gazeX, gazeY: gazeY).paintImage(canvas, size);
-    _signature(canvas, size, s, inLens);
+    mesh.draw(canvas);
+    EyesPainter(pose: pose, warp: mesh.warp).paintImage(canvas, size);
+    _signature(canvas, size, s);
     canvas.restore();
   }
 
-  // tiny on the panel, readable through the lens
-  void _signature(Canvas canvas, Size size, double s, bool inLens) {
+  // tiny, bottom right
+  void _signature(Canvas canvas, Size size, double s) {
     final off = offsetFor(size);
     final anchor = Offset(
       (size.width - off.dx) / s - 150,
@@ -69,16 +40,7 @@ class ScenePainter extends CustomPainter {
     canvas.save();
     canvas.translate(anchor.dx, anchor.dy);
     canvas.rotate(-0.06);
-    canvas.scale(inLens ? 2.6 : 1);
     canvas.translate(-46, 2);
-    if (inLens) {
-      canvas.drawOval(
-        const Rect.fromLTWH(-14, -22, 96, 44),
-        Paint()
-          ..color = const Color(0x40000000)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-      );
-    }
     final mono = Path()
       ..moveTo(0, 8)
       ..cubicTo(4, -6, 8, -14, 10, -10)
@@ -125,6 +87,5 @@ class ScenePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(ScenePainter old) =>
-      old.image != image || old.gazeX != gazeX || old.gazeY != gazeY;
+  bool shouldRepaint(ScenePainter old) => old.mesh != mesh || old.pose != pose;
 }

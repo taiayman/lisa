@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'gaze_source.dart';
 
-class PointerGazeSource implements GazeSource {
+class PointerGazeSource extends GazeSource {
   final _ctrl = StreamController<Offset>.broadcast();
 
   @override

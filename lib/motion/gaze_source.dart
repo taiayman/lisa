@@ -5,10 +5,13 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 abstract class GazeSource {
   Stream<Offset> get gaze;
+
+  /// 0..1, asks the eyes to close (closed fist on the hand source).
+  double get shut => 0;
   void dispose() {}
 }
 
-class TiltGazeSource implements GazeSource {
+class TiltGazeSource extends GazeSource {
   TiltGazeSource() {
     _sub = accelerometerEventStream(
       samplingPeriod: const Duration(milliseconds: 16),

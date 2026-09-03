@@ -1,13 +1,17 @@
 import 'package:flutter/rendering.dart';
 
+import '../motion/pose.dart';
+import 'face_mesh.dart';
 import 'geometry.dart';
 
 class EyesPainter extends CustomPainter {
-  const EyesPainter({this.gazeX = 0, this.gazeY = 0});
+  EyesPainter({this.pose = const Pose(), FaceWarp? warp})
+    : warp = warp ?? FaceWarp(pose);
 
-  final double gazeX;
-
-  final double gazeY;
+  final Pose pose;
+  final FaceWarp warp;
+  double get gazeX => pose.gazeX;
+  double get gazeY => pose.gazeY;
 
   static const eyeBackground = Color(0xFFd9ad52);
   static const iris = Color(0xFF4e2c14);
@@ -16,7 +20,7 @@ class EyesPainter extends CustomPainter {
   static const varnish = Color(0x26d9ad52);
 
   // traced from the white pixels in the asset
-  static const _left = [
+  static const leftHole = [
     Offset(491, 691),
     Offset(497, 687),
     Offset(503, 684),
@@ -52,7 +56,7 @@ class EyesPainter extends CustomPainter {
     Offset(503, 697),
     Offset(497, 693),
   ];
-  static const _right = [
+  static const rightHole = [
     Offset(723, 695),
     Offset(729, 692),
     Offset(735, 689),
@@ -117,8 +121,8 @@ class EyesPainter extends CustomPainter {
       (gazeY.clamp(-1, 1) + 1) / 2 * size.height,
     );
     final target = (screen - offsetFor(size)) / scaleFor(size);
-    _eye(canvas, _left, const Offset(541, 689), 95, target);
-    _eye(canvas, _right, const Offset(796, 689), 134, target);
+    _eye(canvas, leftHole, const Offset(541, 689), 95, target);
+    _eye(canvas, rightHole, const Offset(796, 689), 134, target);
   }
 
   static const _reach = 500.0;
@@ -130,7 +134,8 @@ class EyesPainter extends CustomPainter {
     double width,
     Offset target,
   ) {
-    final path = polygon(hole);
+    final path = polygon([for (final p in hole) warp.apply(p)]);
+    if (pose.blink > .97) return _crease(c, path); // shut
     c.drawPath(path, Paint()..color = eyeBackground);
     c.save();
     c.clipPath(path);
@@ -142,7 +147,7 @@ class EyesPainter extends CustomPainter {
       (d.dx * k * maxX).clamp(-maxX, maxX),
       (d.dy * k * 14).clamp(-12.0, 12.0),
     );
-    final ic = center + shift;
+    final ic = warp.apply(center + shift);
     c.drawCircle(
       ic,
       26,
@@ -159,7 +164,7 @@ class EyesPainter extends CustomPainter {
     );
     c.drawCircle(
       ic,
-      9,
+      9 * (1 + .07 * pose.dilation),
       Paint()
         ..color = pupil
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
@@ -182,17 +187,18 @@ class EyesPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
     c.restore();
-    c.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xB3603a1c)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
-    );
+    _crease(c, path);
   }
 
+  void _crease(Canvas c, Path path) => c.drawPath(
+    path,
+    Paint()
+      ..color = const Color(0xB3603a1c)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+  );
+
   @override
-  bool shouldRepaint(EyesPainter old) =>
-      old.gazeX != gazeX || old.gazeY != gazeY;
+  bool shouldRepaint(EyesPainter old) => old.pose != pose;
 }

@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lisa/motion/pose.dart';
+import 'package:lisa/painting/face_mesh.dart';
 import 'package:lisa/painting/geometry.dart';
 import 'package:lisa/painting/scene_painter.dart';
 
@@ -23,9 +25,8 @@ void main() {
     const size = Size(imgW, imgH);
     final recorder = ui.PictureRecorder();
     ScenePainter(
-      image: image,
-      gazeX: gazeX,
-      gazeY: gazeY,
+      mesh: await FaceMesh.create(image),
+      pose: Pose(gazeX: gazeX, gazeY: gazeY, headX: gazeX, headY: gazeY),
     ).paint(Canvas(recorder), size);
     final img = await recorder.endRecording().toImage(
       imgW.toInt(),
